@@ -214,6 +214,21 @@
     <div class="tip">提示：本页面数据由前台每日更新；后厨如发现到餐人数与页面不符，请第一时间反馈前台核对，避免备餐不足或浪费。</div>
   </section>
 
+  <!-- 更新记录 -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="dot"></span>
+      <h2>更新记录</h2>
+      <span class="note">每次修改人数自动留档 · 显示最近 10 次</span>
+    </div>
+    <table class="grade-table">
+      <thead>
+        <tr><th style="width:130px">日期</th><th>托管合计</th><th>上课</th><th>午托</th><th>晚托</th></tr>
+      </thead>
+      <tbody id="historyBody"></tbody>
+    </table>
+  </section>
+
   <footer>
     博识堂 · 托管台账（内部资料）<br>
     人数以校区前台每日登记为准；每日数据维护在 data.js 文件中，更新后刷新即可。
@@ -279,6 +294,26 @@
   document.getElementById('mealDinnerSub').textContent =
     `约占托管总人数 ${total ? Math.round(dinner / total * 100) : 0}%`;
   document.getElementById('mealTotal').textContent = lunch + dinner;
+
+  // 更新记录（最近 10 次）
+  var hist = (DATA.history || []).slice(0, 10);
+  var histBody = document.getElementById('historyBody');
+  if (hist.length) {
+    histBody.innerHTML = hist.map(function (h, i) {
+      var gg = h.grades || {}, mm = h.meals || {};
+      var gt = (gg['初一'] || 0) + (gg['初二'] || 0) + (gg['初三'] || 0);
+      return '<tr' + (i === 0 ? ' style="background:#f2faf5;font-weight:600"' : '') + '>' +
+        '<td>' + h.date + (i === 0 ? '（最新）' : '') + '</td>' +
+        '<td>' + gt + '</td>' +
+        '<td>' + (h.classStudents || 0) + '</td>' +
+        '<td>' + (mm.lunch || 0) + '</td>' +
+        '<td>' + (mm.dinner || 0) + '</td>' +
+        '</tr>';
+    }).join('');
+  } else {
+    histBody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--ink-2);padding:14px;">' +
+      '暂无更新记录</td></tr>';
+  }
 })();
 </script>
 </body>
