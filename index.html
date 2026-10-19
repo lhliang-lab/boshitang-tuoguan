@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>博识堂 · 托管人数总览</title>
+<style>
+  :root {
+    --bg: #f6f8f4;
+    --card: #ffffff;
+    --ink: #1c2b23;
+    --ink-2: #5b6b62;
+    --line: #e3e8e1;
+    --green: #00AB5F;       /* 博识堂主绿 */
+    --green-deep: #007A44;  /* 深绿 */
+    --green-soft: #DFF3E9;  /* 浅绿 */
+    --amber: #b7791f;
+    --amber-soft: #fdf3e3;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 24px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
+  }
+  h1 { font-size: 24px; font-weight: 700; }
+  h1 .sub { font-size: 13px; color: var(--ink-2); font-weight: 400; margin-left: 10px; }
+  .head-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .date-chip {
+    background: var(--green-soft); color: var(--green-deep);
+    border: 1px solid #cbe9dc; font-size: 13px; padding: 6px 14px;
+    border-radius: 999px;
+  }
+  .btn-print {
+    background: var(--green); color: #fff; border: none; font-size: 13px;
+    padding: 7px 16px; border-radius: 999px; cursor: pointer; font-weight: 600;
+  }
+  .btn-print:hover { background: var(--green-deep); }
+
+  /* ===== 顶部汇总卡 ===== */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  .sum-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .sum-card .label { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+  .sum-card .value { font-size: 32px; font-weight: 700; letter-spacing: .5px; }
+  .sum-card .value small { font-size: 14px; font-weight: 400; color: var(--ink-2); margin-left: 4px; }
+  .sum-card .hint { font-size: 12px; color: var(--ink-2); margin-top: 6px; }
+  .sum-card.c-green .value { color: var(--green-deep); }
+  .sum-card.c-amber .value { color: var(--amber); }
+
+  /* ===== 区块通用 ===== */
+  section.panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 18px;
+  }
+  .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .panel-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  .panel-head h2 { font-size: 17px; font-weight: 700; }
+  .panel-head .note { font-size: 12px; color: var(--ink-2); }
+
+  /* ===== 年级分布 ===== */
+  .grade-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .grade-table th, .grade-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); }
+  .grade-table th { font-size: 12px; color: var(--ink-2); font-weight: 500; background: #fafcf9; }
+  .grade-table tr:last-child td { border-bottom: none; }
+  .grade-table td.num { font-weight: 700; font-size: 16px; }
+  .grade-table tr.total td { font-weight: 700; background: #fafcf9; }
+  .bar-track { background: var(--green-soft); border-radius: 999px; height: 10px; width: 100%; overflow: hidden; }
+  .bar-fill { background: var(--green); height: 100%; border-radius: 999px; }
+  .pct { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+
+  /* ===== 后厨备餐区（重点） ===== */
+  .kitchen {
+    background: linear-gradient(135deg, var(--green-soft), #ffffff);
+    border: 2px solid var(--green);
+  }
+  .kitchen .panel-head h2 { color: var(--green-deep); }
+  .meal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .meal-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 24px; text-align: center;
+  }
+  .meal-card .meal-name { font-size: 15px; font-weight: 700; color: var(--ink-2); margin-bottom: 6px; }
+  .meal-card .meal-name .tag {
+    display: inline-block; font-size: 11px; font-weight: 600; color: #fff;
+    background: var(--green-deep); border-radius: 6px; padding: 2px 8px; margin-right: 8px;
+    vertical-align: 2px;
+  }
+  .meal-card .meal-num { font-size: 56px; font-weight: 800; color: var(--green-deep); line-height: 1.1; }
+  .meal-card .meal-num small { font-size: 18px; font-weight: 400; color: var(--ink-2); margin-left: 6px; }
+  .meal-card .meal-sub { font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+  .kitchen-total {
+    margin-top: 14px; text-align: center; font-size: 14px; color: var(--ink-2);
+  }
+  .kitchen-total b { color: var(--green-deep); font-size: 20px; margin: 0 4px; }
+
+  .tip {
+    margin-top: 14px; font-size: 12.5px; color: var(--amber);
+    background: var(--amber-soft); border: 1px solid #f3e2bf;
+    border-radius: 10px; padding: 10px 14px; line-height: 1.6;
+  }
+
+  footer { text-align: center; font-size: 12px; color: var(--ink-2); margin-top: 10px; line-height: 1.7; }
+
+  @media (max-width: 760px) {
+    body { padding: 14px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .meal-grid { grid-template-columns: 1fr; }
+    .meal-card .meal-num { font-size: 46px; }
+    h1 { font-size: 20px; }
+  }
+
+  /* 打印：白底、无色块、去阴影，节约墨水 */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .btn-print { display: none; }
+    .sum-card, section.panel, .meal-card { border: 1px solid #999; box-shadow: none; }
+    .kitchen { background: #fff; border: 1.5px solid #333; }
+    .kitchen .panel-head h2, .meal-card .meal-num, .kitchen-total b { color: #000; }
+    .meal-card .meal-name .tag { background: #333; }
+    .bar-track, .bar-fill { border: 1px solid #999; }
+    .tip { background: #fff; border: 1px solid #999; color: #333; }
+    section.panel { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>博识堂 · 托管人数总览<span class="sub">托管台账 / 每日数据</span></h1>
+    <div class="head-right">
+      <span class="date-chip" id="dateChip"></span>
+      <button class="btn-print" onclick="window.print()">打印 / 存为 PDF</button>
+    </div>
+  </header>
+
+  <!-- 汇总卡 -->
+  <div class="summary">
+    <div class="sum-card c-green">
+      <div class="label">托管总人数</div>
+      <div class="value" id="sumTotal">—<small>人</small></div>
+      <div class="hint" id="sumTotalHint">初一 / 初二 / 初三</div>
+    </div>
+    <div class="sum-card c-green">
+      <div class="label">上课人数</div>
+      <div class="value" id="sumClass">—<small>人</small></div>
+      <div class="hint" id="sumClassHint">参加文化课辅导</div>
+    </div>
+    <div class="sum-card c-amber">
+      <div class="label">午托吃饭人数</div>
+      <div class="value" id="sumLunch">—<small>人</small></div>
+      <div class="hint">午餐用餐</div>
+    </div>
+    <div class="sum-card c-amber">
+      <div class="label">晚托吃饭人数</div>
+      <div class="value" id="sumDinner">—<small>人</small></div>
+      <div class="hint">晚餐用餐</div>
+    </div>
+  </div>
+
+  <!-- 年级分布 -->
+  <section class="panel">
+    <div class="panel-head">
+      <span class="dot"></span>
+      <h2>托管总人数 · 年级分布</h2>
+      <span class="note">按初一 / 初二 / 初三分类统计</span>
+    </div>
+    <table class="grade-table">
+      <thead>
+        <tr><th style="width:90px">年级</th><th style="width:70px">人数</th><th>占比</th><th style="width:120px">占托管总人数比例</th></tr>
+      </thead>
+      <tbody id="gradeBody"></tbody>
+      <tfoot>
+        <tr class="total">
+          <td>合计</td>
+          <td class="num" id="gradeTotalNum">—</td>
+          <td colspan="2" style="font-size:12px;color:var(--ink-2);font-weight:400;">数据更新日期：<span id="gradeUpdated"></span></td>
+        </tr>
+      </tfoot>
+    </table>
+  </section>
+
+  <!-- 后厨备餐区 -->
+  <section class="panel kitchen">
+    <div class="panel-head">
+      <span class="dot"></span>
+      <h2>后厨备餐看板 · 每餐吃饭人数</h2>
+      <span class="note">请后厨人员按下列人数备餐，如有临时变动请联系前台及时更新</span>
+    </div>
+    <div class="meal-grid">
+      <div class="meal-card">
+        <div class="meal-name"><span class="tag">午餐</span>午托吃饭人数</div>
+        <div class="meal-num" id="mealLunch">—<small>人</small></div>
+        <div class="meal-sub" id="mealLunchSub">—</div>
+      </div>
+      <div class="meal-card">
+        <div class="meal-name"><span class="tag">晚餐</span>晚托吃饭人数</div>
+        <div class="meal-num" id="mealDinner">—<small>人</small></div>
+        <div class="meal-sub" id="mealDinnerSub">—</div>
+      </div>
+    </div>
+    <div class="kitchen-total">今日两餐用餐合计 <b id="mealTotal">—</b> 人次</div>
+    <div class="tip">提示：本页面数据由前台每日更新；后厨如发现到餐人数与页面不符，请第一时间反馈前台核对，避免备餐不足或浪费。</div>
+  </section>
+
+  <footer>
+    博识堂 · 托管台账（内部资料）<br>
+    人数以校区前台每日登记为准；每日数据维护在 data.js 文件中，更新后刷新即可。
+  </footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ============================================================
+ * 渲染逻辑 —— 数据来自同目录 data.js（每日维护文件，详见其注释）
+ * ============================================================ */
+(function render() {
+  let D = window.TUOGUAN_DATA;
+  if (!D) {
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div style="background:#fdecea;border:1px solid #f3c1bb;color:#c0392b;' +
+      'padding:10px 16px;border-radius:10px;font-size:13px;margin-bottom:14px;">' +
+      '未加载到 data.js：请确认 data.js 与本页面放在同一文件夹内。</div>');
+    D = { updated: '—', grades: {}, classStudents: 0, meals: { lunch: 0, dinner: 0 } };
+  }
+  const DATA = D;
+  const g = DATA.grades;
+  const gradeKeys = Object.keys(g);
+  const total = gradeKeys.reduce((s, k) => s + g[k], 0);
+  const lunch = DATA.meals.lunch, dinner = DATA.meals.dinner;
+
+  // 日期
+  const now = new Date();
+  const weekMap = ['日','一','二','三','四','五','六'];
+  document.getElementById('dateChip').textContent =
+    `数据日期：${DATA.updated}（周${weekMap[now.getDay()]}）`;
+
+  // 汇总卡
+  document.getElementById('sumTotal').innerHTML = `${total}<small>人</small>`;
+  document.getElementById('sumTotalHint').textContent =
+    gradeKeys.map(k => `${k} ${g[k]} 人`).join(' · ');
+  document.getElementById('sumClass').innerHTML = `${DATA.classStudents}<small>人</small>`;
+  const classPct = total ? Math.round(DATA.classStudents / total * 100) : 0;
+  document.getElementById('sumClassHint').textContent = `约占托管总人数 ${classPct}%`;
+  document.getElementById('sumLunch').innerHTML = `${lunch}<small>人</small>`;
+  document.getElementById('sumDinner').innerHTML = `${dinner}<small>人</small>`;
+
+  // 年级分布表
+  const body = document.getElementById('gradeBody');
+  body.innerHTML = gradeKeys.map(k => {
+    const n = g[k];
+    const pct = total ? Math.round(n / total * 100) : 0;
+    return `<tr>
+      <td style="font-weight:600;">${k}</td>
+      <td class="num">${n}</td>
+      <td><div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div></td>
+      <td><span class="pct">${pct}%</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('gradeTotalNum').textContent = total;
+  document.getElementById('gradeUpdated').textContent = DATA.updated;
+
+  // 后厨备餐区
+  document.getElementById('mealLunch').innerHTML = `${lunch}<small>人</small>`;
+  document.getElementById('mealDinner').innerHTML = `${dinner}<small>人</small>`;
+  document.getElementById('mealLunchSub').textContent =
+    `约占托管总人数 ${total ? Math.round(lunch / total * 100) : 0}%`;
+  document.getElementById('mealDinnerSub').textContent =
+    `约占托管总人数 ${total ? Math.round(dinner / total * 100) : 0}%`;
+  document.getElementById('mealTotal').textContent = lunch + dinner;
+})();
+</script>
+</body>
+</html>
