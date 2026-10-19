@@ -152,7 +152,7 @@
   <section class="panel" id="ghPanel">
     <div class="panel-head"><span class="dot"></span><h2>直连 GitHub 更新（可选）</h2></div>
     <div class="gh-desc">
-      填好上面的数字后，点「一键更新」可直接把 data.js 写入 GitHub 仓库，约 1 分钟后线上页面自动生效——不需要下载、也不需要上传文件。<br>
+      填好上面的数字后，点「一键更新」可直接把 data.js 写入 GitHub 仓库，约 1 分钟后线上页面自动生效——不需要下载、也不需要上传文件。每次更新还会自动在「更新记录」里留一条档（总览页可查最近 10 次）。<br>
       首次使用需配置一次访问令牌：GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → 生成新令牌，仓库只选 <b>boshitang-tuoguan</b>，权限给 <b>Contents: Read and write</b>，把生成的令牌（github_pat_ 开头）粘贴到下面保存即可。
     </div>
     <div class="field">
@@ -192,8 +192,39 @@
     $(id).addEventListener('input', refreshPreview);
   });
 
+  // 本次填入的一条记录
+  function entry() {
+    return {
+      date: $('fDate').value || 'YYYY-MM-DD',
+      grades: { '初一': num('fG1'), '初二': num('fG2'), '初三': num('fG3') },
+      classStudents: num('fClass'),
+      meals: { lunch: num('fLunch'), dinner: num('fDinner') }
+    };
+  }
+
+  // 合并更新历史：同日期的旧记录替换为本次，最多保留 30 条
+  function mergeHistory(prev, cur) {
+    var arr = (prev || []).filter(function (h) { return h && h.date !== cur.date; });
+    arr.unshift(cur);
+    return arr.slice(0, 30);
+  }
+
+  function historyBlock(list) {
+    if (!list.length) {
+      return "  history: [\n    // 每次更新自动追加一条：{ date:'YYYY-MM-DD', grades:{...}, classStudents:0, meals:{lunch:0,dinner:0} }\n  ]";
+    }
+    var lines = list.map(function (h) {
+      var g = h.grades || {}, m = h.meals || {};
+      return "    { date: '" + h.date + "', grades: { '初一': " + (g['初一'] || 0) +
+        ", '初二': " + (g['初二'] || 0) + ", '初三': " + (g['初三'] || 0) +
+        " }, classStudents: " + (h.classStudents || 0) +
+        ", meals: { lunch: " + (m.lunch || 0) + ", dinner: " + (m.dinner || 0) + " } }";
+    });
+    return "  history: [\n" + lines.join(',\n') + "\n  ]";
+  }
+
   // 生成 data.js 内容（格式与正式 data.js 完全一致）
-  function build() {
+  function build(history) {
     var d = $('fDate').value || 'YYYY-MM-DD';
     return [
       '/* ============================================================',
@@ -211,11 +242,31 @@
       '  classStudents: ' + num('fClass') + ',          // 上课人数（参加文化课辅导的孩子）',
       '  meals: {',
       '    lunch: ' + num('fLunch') + ',                // 午托吃饭人数（午餐）',
-      '    dinner: ' + num('fDinner') + '               // 晚托吃饭人数（晚餐）',
-      '  }',
+      '    dinner: ' + num('fDinner') + ',              // 晚托吃饭人数（晚餐）',
+      '  },',
+      '',
+      historyBlock(history || []),
       '};',
       ''
     ].join('\n');
+  }
+
+  // 读取线上 data.js 的旧更新记录（http 环境可用；本地双击打开时取不到，历史从本次开始）
+  var lastHistory = null;
+  function ensureHistory(cb) {
+    if (lastHistory) { cb(lastHistory); return; }
+    fetch('data.js', { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.text();
+    }).then(function (code) {
+      (0, eval)(code);
+      lastHistory = (window.TUOGUAN_DATA && window.TUOGUAN_DATA.history) || [];
+      cb(lastHistory);
+    }).catch(function () {
+      lastHistory = [];
+      cb(lastHistory);
+      toast('未读到线上旧记录，更新历史将从本次开始');
+    });
   }
 
   function toast(msg) {
@@ -226,21 +277,26 @@
   }
 
   $('btnGen').addEventListener('click', function () {
-    $('output').value = build();
-    $('result').style.display = 'block';
-    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    ensureHistory(function (prev) {
+      $('output').value = build(mergeHistory(prev, entry()));
+      $('result').style.display = 'block';
+      $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
   });
 
   $('btnDownload').addEventListener('click', function () {
-    var blob = new Blob([build()], { type: 'text/javascript;charset=utf-8' });
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'data.js';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(a.href);
-    toast('已下载 data.js，请覆盖旧文件');
+    ensureHistory(function (prev) {
+      var content = build(mergeHistory(prev, entry()));
+      var blob = new Blob([content], { type: 'text/javascript;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'data.js';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      toast('已下载 data.js，请覆盖旧文件');
+    });
   });
 
   $('btnCopy').addEventListener('click', function () {
@@ -272,6 +328,7 @@
       $('fLunch').value = d.meals.lunch || 0;
       $('fDinner').value = d.meals.dinner || 0;
       refreshPreview();
+      lastHistory = (window.TUOGUAN_DATA && window.TUOGUAN_DATA.history) || [];
       toast('已按当前 data.js 预填');
     }).catch(function () {
       toast('读取失败：只有通过网址打开本页才能预填');
@@ -314,7 +371,6 @@
       ghLog2('尚未保存令牌：请先粘贴令牌并点「保存令牌」。', 'err');
       return;
     }
-    var content = build();
     var btn = $('btnPush');
     btn.disabled = true;
     btn.textContent = '正在更新…';
@@ -326,7 +382,13 @@
       if (!r.ok) throw new Error('获取当前版本失败（HTTP ' + r.status + '）');
       return r.json();
     }).then(function (j) {
-      ghLog2('② 正在写入新数据…');
+      ghLog2('② 正在读取线上更新记录…');
+      return new Promise(function (resolve) {
+        ensureHistory(function (prev) { resolve({ sha: j.sha, prev: prev }); });
+      });
+    }).then(function (ctx) {
+      var content = build(mergeHistory(ctx.prev, entry()));
+      ghLog2('③ 正在写入 data.js（含本次更新记录）…');
       return fetch('https://api.github.com/repos/' + REPO + '/contents/data.js', {
         method: 'PUT',
         headers: {
@@ -337,7 +399,7 @@
         body: JSON.stringify({
           message: 'update data.js ' + ($('fDate').value || ''),
           content: b64utf8(content),
-          sha: j.sha,
+          sha: ctx.sha,
           branch: 'main'
         })
       });
@@ -349,7 +411,7 @@
       return r.json();
     }).then(function (j) {
       var sha = (j.commit && j.commit.sha) ? j.commit.sha.slice(0, 7) : '';
-      ghLog2('已更新到 GitHub（commit ' + sha + '）。约 1 分钟后刷新线上页面 https://lhliang-lab.github.io/boshitang-tuoguan/ 即可看到新数据。', 'ok');
+      ghLog2('已更新到 GitHub（commit ' + sha + '），本次改动已自动记入更新记录。约 1 分钟后刷新线上页面 https://lhliang-lab.github.io/boshitang-tuoguan/ 即可看到新数据。', 'ok');
       toast('已更新到 GitHub');
     }).catch(function (e) {
       ghLog2('更新失败：' + e.message, 'err');
