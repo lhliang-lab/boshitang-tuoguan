@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>博识堂 · 托管数据录入</title>
+<style>
+  :root {
+    --bg: #f6f8f4; --card: #ffffff; --ink: #1c2b23; --ink-2: #5b6b62;
+    --line: #e3e8e1; --green: #00AB5F; --green-deep: #007A44; --green-soft: #DFF3E9;
+    --amber: #b7791f; --amber-soft: #fdf3e3; --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); padding: 24px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { margin-bottom: 18px; }
+  h1 { font-size: 22px; font-weight: 700; }
+  h1 .sub { font-size: 13px; color: var(--ink-2); font-weight: 400; margin-left: 10px; }
+  .intro {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; font-size: 13.5px; color: var(--ink-2); line-height: 1.9; margin-bottom: 16px;
+  }
+  .intro b { color: var(--ink); }
+  .intro ol { padding-left: 20px; }
+  section.panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 20px 22px; margin-bottom: 16px;
+  }
+  .panel-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .panel-head .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+  .panel-head h2 { font-size: 16px; font-weight: 700; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  .field input {
+    width: 100%; border: 1px solid var(--line); border-radius: 10px;
+    padding: 10px 14px; font-size: 16px; background: #fff; color: var(--ink);
+  }
+  .field input:focus { outline: none; border-color: var(--green); }
+  .field.full { grid-column: 1 / -1; }
+  .preview {
+    margin-top: 16px; background: var(--green-soft); border-radius: 10px;
+    padding: 12px 16px; font-size: 14px; color: var(--green-deep);
+  }
+  .preview b { font-size: 20px; margin: 0 2px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+  .btn {
+    border: none; border-radius: 999px; padding: 10px 20px; font-size: 14px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:hover { background: var(--green-deep); }
+  .btn-ghost { background: #fff; color: var(--green-deep); border: 1px solid var(--green); }
+  .btn-ghost:hover { background: var(--green-soft); }
+  #result { display: none; }
+  #result textarea {
+    width: 100%; height: 220px; border: 1px solid var(--line); border-radius: 10px;
+    padding: 12px 14px; font-size: 12.5px; font-family: Consolas, "Courier New", monospace;
+    background: #fafcf9; color: var(--ink); resize: vertical;
+  }
+  .tip {
+    font-size: 12.5px; color: var(--amber); background: var(--amber-soft);
+    border: 1px solid #f3e2bf; border-radius: 10px; padding: 10px 14px; line-height: 1.7;
+  }
+  .toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%);
+    background: var(--green-deep); color: #fff; font-size: 13px; font-weight: 600;
+    padding: 9px 20px; border-radius: 999px; opacity: 0; transition: opacity .2s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+  footer { text-align: center; font-size: 12px; color: var(--ink-2); margin-top: 8px; line-height: 1.7; }
+  @media (max-width: 560px) {
+    body { padding: 14px; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>博识堂 · 托管数据录入<span class="sub">生成每日 data.js</span></h1>
+  </header>
+
+  <div class="intro">
+    <b>使用方法：</b>
+    <ol>
+      <li>填写下方当天人数，点「生成 data.js」；</li>
+      <li>点「下载 data.js」，用下载的文件<b>覆盖</b>「托管台账」文件夹里的旧 data.js；</li>
+      <li>刷新「托管人数总览」页面，数字即更新。</li>
+    </ol>
+    也可以不下载：点「复制」，把内容发给李老师或 AI，由其代写文件。
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><span class="dot"></span><h2>当天人数</h2></div>
+    <div class="form-grid">
+      <div class="field full">
+        <label>数据日期</label>
+        <input type="date" id="fDate">
+      </div>
+      <div class="field">
+        <label>初一托管人数</label>
+        <input type="number" id="fG1" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>初二托管人数</label>
+        <input type="number" id="fG2" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>初三托管人数</label>
+        <input type="number" id="fG3" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>上课人数</label>
+        <input type="number" id="fClass" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>午托吃饭人数（午餐）</label>
+        <input type="number" id="fLunch" min="0" placeholder="0">
+      </div>
+      <div class="field">
+        <label>晚托吃饭人数（晚餐）</label>
+        <input type="number" id="fDinner" min="0" placeholder="0">
+      </div>
+    </div>
+    <div class="preview" id="preview">托管总人数预览：<b id="pvTotal">0</b> 人</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnGen" type="button">生成 data.js</button>
+      <button class="btn btn-ghost" id="btnPrefill" type="button">读取当前 data.js 预填</button>
+    </div>
+  </section>
+
+  <section class="panel" id="result">
+    <div class="panel-head"><span class="dot"></span><h2>生成结果</h2></div>
+    <textarea id="output" spellcheck="false"></textarea>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-primary" id="btnDownload" type="button">下载 data.js</button>
+      <button class="btn btn-ghost" id="btnCopy" type="button">复制内容</button>
+    </div>
+    <div class="tip" style="margin-top:12px">
+      注意：下载的文件名必须保持为 <b>data.js</b>，并放到「托管人数总览」页面同一文件夹内覆盖旧文件，否则页面读不到新数据。
+    </div>
+  </section>
+
+  <footer>博识堂 · 托管台账（内部资料）</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var num = function (id) { var v = parseInt($(id).value, 10); return isNaN(v) || v < 0 ? 0 : v; };
+
+  // 默认日期 = 今天
+  var now = new Date();
+  var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+  $('fDate').value = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+
+  // 实时预览托管总人数
+  function refreshPreview() {
+    $('pvTotal').textContent = num('fG1') + num('fG2') + num('fG3');
+  }
+  ['fG1', 'fG2', 'fG3'].forEach(function (id) {
+    $(id).addEventListener('input', refreshPreview);
+  });
+
+  // 生成 data.js 内容（格式与正式 data.js 完全一致）
+  function build() {
+    var d = $('fDate').value || 'YYYY-MM-DD';
+    return [
+      '/* ============================================================',
+      ' * 博识堂 · 托管台账 —— 每日数据（唯一需要每天修改的文件）',
+      ' * ------------------------------------------------------------',
+      ' * 由「托管数据录入」页生成于 ' + new Date().toLocaleString('zh-CN') + '',
+      ' * ============================================================ */',
+      'window.TUOGUAN_DATA = {',
+      "  updated: '" + d + "',      // 数据日期，格式 YYYY-MM-DD",
+      '  grades: {                   // 各年级托管人数',
+      "    '初一': " + num('fG1') + ',',
+      "    '初二': " + num('fG2') + ',',
+      "    '初三': " + num('fG3'),
+      '  },',
+      '  classStudents: ' + num('fClass') + ',          // 上课人数（参加文化课辅导的孩子）',
+      '  meals: {',
+      '    lunch: ' + num('fLunch') + ',                // 午托吃饭人数（午餐）',
+      '    dinner: ' + num('fDinner') + '               // 晚托吃饭人数（晚餐）',
+      '  }',
+      '};',
+      ''
+    ].join('\n');
+  }
+
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  $('btnGen').addEventListener('click', function () {
+    $('output').value = build();
+    $('result').style.display = 'block';
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  $('btnDownload').addEventListener('click', function () {
+    var blob = new Blob([build()], { type: 'text/javascript;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'data.js';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    toast('已下载 data.js，请覆盖旧文件');
+  });
+
+  $('btnCopy').addEventListener('click', function () {
+    var ta = $('output');
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    if (!ok && navigator.clipboard) {
+      navigator.clipboard.writeText(ta.value).then(function () { toast('已复制'); });
+    } else {
+      toast(ok ? '已复制' : '复制失败，请手动全选复制');
+    }
+  });
+
+  // 预填：读取同目录 data.js（仅在通过网址打开时可用；本地双击打开受浏览器安全限制）
+  $('btnPrefill').addEventListener('click', function () {
+    fetch('data.js', { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.text();
+    }).then(function (code) {
+      (0, eval)(code);
+      var d = window.TUOGUAN_DATA;
+      if (!d) throw new Error('no data');
+      $('fDate').value = d.updated || $('fDate').value;
+      $('fG1').value = d.grades['初一'] || 0;
+      $('fG2').value = d.grades['初二'] || 0;
+      $('fG3').value = d.grades['初三'] || 0;
+      $('fClass').value = d.classStudents || 0;
+      $('fLunch').value = d.meals.lunch || 0;
+      $('fDinner').value = d.meals.dinner || 0;
+      refreshPreview();
+      toast('已按当前 data.js 预填');
+    }).catch(function () {
+      toast('读取失败：只有通过网址打开本页才能预填');
+    });
+  });
+})();
+</script>
+</body>
+</html>
